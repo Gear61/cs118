@@ -1,0 +1,202 @@
+# project  configured on Sat Apr 20 12:12:29 2013 by
+# waf 1.6.11 (abi 98, python 20703f0 on linux2)
+# using ./waf configure
+#
+----------------------------------------
+Setting top to
+/home/lochetopus/cs118
+----------------------------------------
+Setting out to
+/home/lochetopus/cs118/build
+----------------------------------------
+Checking for 'gcc' (c compiler)
+find program=['gcc', 'cc'] paths=['/usr/lib/lightdm/lightdm', '/usr/local/sbin', '/usr/local/bin', '/usr/sbin', '/usr/bin', '/sbin', '/bin', '/usr/games', '/usr/local/games'] var='CC' -> '/usr/bin/gcc'
+find program=['ar'] paths=['/usr/lib/lightdm/lightdm', '/usr/local/sbin', '/usr/local/bin', '/usr/sbin', '/usr/bin', '/sbin', '/bin', '/usr/games', '/usr/local/games'] var='AR' -> '/usr/bin/ar'
+/usr/bin/gcc
+----------------------------------------
+Checking for 'g++' (c++ compiler)
+find program=['g++', 'c++'] paths=['/usr/lib/lightdm/lightdm', '/usr/local/sbin', '/usr/local/bin', '/usr/sbin', '/usr/bin', '/sbin', '/bin', '/usr/games', '/usr/local/games'] var='CXX' -> '/usr/bin/g++'
+(tool ar is already loaded, skipping)
+/usr/bin/g++
+----------------------------------------
+Checking boost includes
+1_49
+----------------------------------------
+Checking boost libs
+Found the boost path in /usr/lib with the libraries:
+    /usr/lib/libboost_chrono-mt.a
+    /usr/lib/libboost_chrono-mt.so
+    /usr/lib/libboost_chrono.a
+    /usr/lib/libboost_chrono.so
+    /usr/lib/libboost_chrono.so.1.49.0
+    /usr/lib/libboost_date_time-mt.a
+    /usr/lib/libboost_date_time-mt.so
+    /usr/lib/libboost_date_time.a
+    /usr/lib/libboost_date_time.so
+    /usr/lib/libboost_date_time.so.1.49.0
+    /usr/lib/libboost_filesystem-mt.a
+    /usr/lib/libboost_filesystem-mt.so
+    /usr/lib/libboost_filesystem.a
+    /usr/lib/libboost_filesystem.so
+    /usr/lib/libboost_filesystem.so.1.49.0
+    /usr/lib/libboost_graph-mt.a
+    /usr/lib/libboost_graph-mt.so
+    /usr/lib/libboost_graph.a
+    /usr/lib/libboost_graph.so
+    /usr/lib/libboost_graph.so.1.49.0
+    /usr/lib/libboost_graph_parallel-mt.a
+    /usr/lib/libboost_graph_parallel-mt.so
+    /usr/lib/libboost_graph_parallel.a
+    /usr/lib/libboost_graph_parallel.so
+    /usr/lib/libboost_graph_parallel.so.1.49.0
+    /usr/lib/libboost_iostreams-mt.a
+    /usr/lib/libboost_iostreams-mt.so
+    /usr/lib/libboost_iostreams.a
+    /usr/lib/libboost_iostreams.so
+    /usr/lib/libboost_iostreams.so.1.49.0
+    /usr/lib/libboost_locale-mt.a
+    /usr/lib/libboost_locale-mt.so
+    /usr/lib/libboost_locale.a
+    /usr/lib/libboost_locale.so
+    /usr/lib/libboost_locale.so.1.49.0
+    /usr/lib/libboost_math_c99-mt.a
+    /usr/lib/libboost_math_c99-mt.so
+    /usr/lib/libboost_math_c99.a
+    /usr/lib/libboost_math_c99.so
+    /usr/lib/libboost_math_c99.so.1.49.0
+    /usr/lib/libboost_math_c99f-mt.a
+    /usr/lib/libboost_math_c99f-mt.so
+    /usr/lib/libboost_math_c99f.a
+    /usr/lib/libboost_math_c99f.so
+    /usr/lib/libboost_math_c99f.so.1.49.0
+    /usr/lib/libboost_math_c99l-mt.a
+    /usr/lib/libboost_math_c99l-mt.so
+    /usr/lib/libboost_math_c99l.a
+    /usr/lib/libboost_math_c99l.so
+    /usr/lib/libboost_math_c99l.so.1.49.0
+    /usr/lib/libboost_math_tr1-mt.a
+    /usr/lib/libboost_math_tr1-mt.so
+    /usr/lib/libboost_math_tr1.a
+    /usr/lib/libboost_math_tr1.so
+    /usr/lib/libboost_math_tr1.so.1.49.0
+    /usr/lib/libboost_math_tr1f-mt.a
+    /usr/lib/libboost_math_tr1f-mt.so
+    /usr/lib/libboost_math_tr1f.a
+    /usr/lib/libboost_math_tr1f.so
+    /usr/lib/libboost_math_tr1f.so.1.49.0
+    /usr/lib/libboost_math_tr1l-mt.a
+    /usr/lib/libboost_math_tr1l-mt.so
+    /usr/lib/libboost_math_tr1l.a
+    /usr/lib/libboost_math_tr1l.so
+    /usr/lib/libboost_math_tr1l.so.1.49.0
+    /usr/lib/libboost_mpi-mt.a
+    /usr/lib/libboost_mpi-mt.so
+    /usr/lib/libboost_mpi.a
+    /usr/lib/libboost_mpi.so
+    /usr/lib/libboost_mpi.so.1.49.0
+    /usr/lib/libboost_mpi_python-mt-py27.a
+    /usr/lib/libboost_mpi_python-mt-py27.so
+    /usr/lib/libboost_mpi_python-mt-py32.a
+    /usr/lib/libboost_mpi_python-mt-py32.so
+    /usr/lib/libboost_mpi_python-py27.a
+    /usr/lib/libboost_mpi_python-py27.so
+    /usr/lib/libboost_mpi_python-py27.so.1.49.0
+    /usr/lib/libboost_mpi_python-py32.a
+    /usr/lib/libboost_mpi_python-py32.so
+    /usr/lib/libboost_mpi_python-py32.so.1.49.0
+    /usr/lib/libboost_mpi_python.a
+    /usr/lib/libboost_mpi_python.so
+    /usr/lib/libboost_prg_exec_monitor-mt.a
+    /usr/lib/libboost_prg_exec_monitor-mt.so
+    /usr/lib/libboost_prg_exec_monitor.a
+    /usr/lib/libboost_prg_exec_monitor.so
+    /usr/lib/libboost_prg_exec_monitor.so.1.49.0
+    /usr/lib/libboost_program_options-mt.a
+    /usr/lib/libboost_program_options-mt.so
+    /usr/lib/libboost_program_options.a
+    /usr/lib/libboost_program_options.so
+    /usr/lib/libboost_program_options.so.1.49.0
+    /usr/lib/libboost_python-mt-py27.a
+    /usr/lib/libboost_python-mt-py27.so
+    /usr/lib/libboost_python-mt-py32.a
+    /usr/lib/libboost_python-mt-py32.so
+    /usr/lib/libboost_python-py27.a
+    /usr/lib/libboost_python-py27.so
+    /usr/lib/libboost_python-py27.so.1.49.0
+    /usr/lib/libboost_python-py32.a
+    /usr/lib/libboost_python-py32.so
+    /usr/lib/libboost_python-py32.so.1.49.0
+    /usr/lib/libboost_python.a
+    /usr/lib/libboost_python.so
+    /usr/lib/libboost_random-mt.a
+    /usr/lib/libboost_random-mt.so
+    /usr/lib/libboost_random.a
+    /usr/lib/libboost_random.so
+    /usr/lib/libboost_random.so.1.49.0
+    /usr/lib/libboost_regex-mt.a
+    /usr/lib/libboost_regex-mt.so
+    /usr/lib/libboost_regex.a
+    /usr/lib/libboost_regex.so
+    /usr/lib/libboost_regex.so.1.49.0
+    /usr/lib/libboost_serialization-mt.a
+    /usr/lib/libboost_serialization-mt.so
+    /usr/lib/libboost_serialization.a
+    /usr/lib/libboost_serialization.so
+    /usr/lib/libboost_serialization.so.1.49.0
+    /usr/lib/libboost_signals-mt.a
+    /usr/lib/libboost_signals-mt.so
+    /usr/lib/libboost_signals.a
+    /usr/lib/libboost_signals.so
+    /usr/lib/libboost_signals.so.1.49.0
+    /usr/lib/libboost_system-mt.a
+    /usr/lib/libboost_system-mt.so
+    /usr/lib/libboost_system.a
+    /usr/lib/libboost_system.so
+    /usr/lib/libboost_system.so.1.49.0
+    /usr/lib/libboost_test_exec_monitor-mt.a
+    /usr/lib/libboost_test_exec_monitor.a
+    /usr/lib/libboost_thread-mt.a
+    /usr/lib/libboost_thread-mt.so
+    /usr/lib/libboost_thread.a
+    /usr/lib/libboost_thread.so
+    /usr/lib/libboost_thread.so.1.49.0
+    /usr/lib/libboost_timer-mt.a
+    /usr/lib/libboost_timer-mt.so
+    /usr/lib/libboost_timer.a
+    /usr/lib/libboost_timer.so
+    /usr/lib/libboost_timer.so.1.49.0
+    /usr/lib/libboost_unit_test_framework-mt.a
+    /usr/lib/libboost_unit_test_framework-mt.so
+    /usr/lib/libboost_unit_test_framework.a
+    /usr/lib/libboost_unit_test_framework.so
+    /usr/lib/libboost_unit_test_framework.so.1.49.0
+    /usr/lib/libboost_wave-mt.a
+    /usr/lib/libboost_wave-mt.so
+    /usr/lib/libboost_wave.a
+    /usr/lib/libboost_wave.so
+    /usr/lib/libboost_wave.so.1.49.0
+    /usr/lib/libboost_wserialization-mt.a
+    /usr/lib/libboost_wserialization-mt.so
+    /usr/lib/libboost_wserialization.a
+    /usr/lib/libboost_wserialization.so
+    /usr/lib/libboost_wserialization.so.1.49.0
+Trying pattern boost_thread(-gcc[0-9]{0,3})+(-1_49)+
+Trying pattern boost_thread(-1_49)+
+Trying pattern boost_thread(-1_49)+
+Trying pattern boost_thread(-gcc[0-9]{0,3})+
+Trying pattern boost_thread
+Found boost lib libboost_thread-mt.a
+ok
+----------------------------------------
+Checking for boost linkage
+==>
+#include <boost/thread.hpp>
+int main() { boost::thread t; }
+<==
+[1/2] [32mcxx: build/.conf_check_f9432292e9cb949513778706dc8c1baa/test.cpp -> build/.conf_check_f9432292e9cb949513778706dc8c1baa/testbuild/test.cpp.1.o
+[0m
+['/usr/bin/g++', '-I/usr/include', '../test.cpp', '-c', '-o', 'test.cpp.1.o']
+[2/2] [33mcxxprogram: build/.conf_check_f9432292e9cb949513778706dc8c1baa/testbuild/test.cpp.1.o -> build/.conf_check_f9432292e9cb949513778706dc8c1baa/testbuild/testprog
+[0m
+['/usr/bin/g++', 'test.cpp.1.o', '-o', '/home/lochetopus/cs118/build/.conf_check_f9432292e9cb949513778706dc8c1baa/testbuild/testprog', '-Wl,-Bstatic', '-Wl,-Bdynamic', '-L/usr/lib', '-lboost_thread-mt']
+ok
