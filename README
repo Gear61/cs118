@@ -1,7 +1,7 @@
 HOW TO COMPILE STUFF
 1. ./waf configure
 2. ./waf
-3. Your executable is in the newly created build directory. Run that shit.
+3. Your executable is in the newly created build directory. It is named http-proxy. Run that shit. (./build/http-proxy)
 
 General
 =======
