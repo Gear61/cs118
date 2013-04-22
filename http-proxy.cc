@@ -6,7 +6,8 @@ using namespace std;
 
 int main (int argc, char *argv[])
 {
-  // command line parsing
-  cout << "WHYYYYYYYYYYYY" << endl;
-  return 0;
+	// establish a socket connection
+	// command line parsing
+	cout << "WHYYYYYYYYYYYY" << endl;
+	return 0;
 }
