@@ -1,13 +1,26 @@
-iWEEEEEE
+HOW TO USE GIT
 
+Let's say we are making changes to the same file. You've added some stuff of your own, but you don't know if someone has updated the file 
+since you last pulled. You want to MERGE your changes with theirs. Here's what you do:
 
+1. 'git stash'
+2. 'git pull'
+3. Enter in something for merge message. Boom, you now have a merged version local to your machine.
+4. 'git add (the file)'
+5. 'git commit'
+4. 'git push' to push this merged version.
+
+You want to push new changes, and you know that nobody has made changes to the file you're working on since you last pulled it. 
+Do these things:
+
+1. 'git add (file(s) you edited)'
+2. 'git commit'. Write something meaningful for the commit message please.
+6. 'git push' to update the repository.
 
 HOW TO COMPILE STUFF
 1. ./waf configure
 2. ./waf
 3. Your executable is in the newly created build directory. It is named http-proxy. Run that shit. (./build/http-proxy)
-
-Note from Alex.
 
 General
 =======
