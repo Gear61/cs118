@@ -7,14 +7,14 @@ since you last pulled. You want to MERGE your changes with theirs. Here's what y
 2. 'git pull'
 3. Enter in something for merge message. Boom, you now have a merged version local to your machine.
 4. 'git add (the file)'
-5. 'git commit'
+5. 'git commit -m your comment here'
 4. 'git push' to push this merged version.
 
 You want to push new changes, and you know that nobody has made changes to the file you're working on since you last pulled it. 
 Do these things:
 
 1. 'git add (file(s) you edited)'
-2. 'git commit'. Write something meaningful for the commit message please.
+2. 'git commit -m your message here'. Write something meaningful for the commit message please.
 6. 'git push' to update the repository.
 
 HOW TO COMPILE STUFF
