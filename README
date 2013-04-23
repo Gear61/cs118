@@ -1,5 +1,8 @@
 HOW TO USE GIT
 
+BEFORE YOU START WORKING ON ANYTHING, MAKE SURE TO RUN git pull.
+BEFORE YOU PUSH ANYTHING, MAKE SURE TO RUN ./waf distclean!
+
 Let's say we are making changes to the same file. You've added some stuff of your own, but you don't know if someone has updated the file 
 since you last pulled. You want to MERGE your changes with theirs. Here's what you do:
 
