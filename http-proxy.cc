@@ -28,7 +28,7 @@ int main (int argc, char *argv[])
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
 
-	getaddrinfo(NULL, "14805", &hints, &res); // Open port 14805 for victory
+	getaddrinfo(NULL, "12900", &hints, &res); // Open port 14805 for victory
 
 	// make a socket
 
@@ -39,19 +39,46 @@ int main (int argc, char *argv[])
 	bind(sockfd, res->ai_addr, res->ai_addrlen);
 	listen(sockfd, 10); // Listen on port 14805 for incoming connections
 
+	printf("We're now listening on port 12900...\n");
+
 	struct sockaddr_storage their_addr; // Create a struct to hold the receiver information
 	socklen_t addr_size; // Initialize a size variable for their IP address
 	addr_size = sizeof(their_addr); // Get the size of it
 	
-	// Accept an incoming connection, open a socket 'newSock' for it
-	int newSock = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
+	printf("Trying to set up a connection...\n");
 
+	// Accept an incoming connection, open a socket 'newSock' for it
+	int newSock;
+	// char incoming[1024];
 	while (1)
 	{
-		sendto(newSock, "Hello", 5, 0, (struct sockaddr *)&their_addr, addr_size);
-	}	
+		newSock = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
+		if (newSock != -1)
+		{
+			printf("FUCK YEAH SEAKING! WE HAVE A CONNECTION BITCHES!\n");
+			int i = 0;
+			while (1)
+			{
+				if (i < 10)
+				{
+					send(newSock, "Seaking\n", 8, 0);
+				}
+				i++;
+				// recv(newSock, incoming, 1024, 0);
+			}
+		}
+	}
 
-	shutdown(newSock, 0);
+	/* char incoming[1024];
+	while(1)
+	{
+		if (!recv(newSock, (void*) incoming, 1024, 0))
+		{
+			printf("The client just told us: %s\n", incoming);
+		}
+	} */
+
+	shutdown(sockfd, 0);
 
 	// DEREK: Take in the request from the above level
 	// Parse it for relevant pieces
