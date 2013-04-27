@@ -68,7 +68,7 @@ int main (int argc, char *argv[])
 
 			select(newSock+1, &readfds, NULL, NULL, &tv);
 		
-			char incoming[1024];
+			// char incoming[1024];
 			if (FD_ISSET(newSock, &readfds))
 			{
 				printf("OMFG, THEY DID SOMETHING\n");
