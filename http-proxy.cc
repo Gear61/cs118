@@ -9,6 +9,8 @@
 
 using namespace std;
 
+char LISTENING_PORT[5] = {'1', '4', '8', '0', '5'};
+
 int main (int argc, char *argv[])
 {
 	// ALEX: Set up a socket and listen to incoming connection requests
@@ -28,7 +30,7 @@ int main (int argc, char *argv[])
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
 
-	getaddrinfo(NULL, "12900", &hints, &res); // Open port 14805 for victory
+	getaddrinfo(NULL, LISTENING_PORT, &hints, &res); // Open port 14805 for victory
 
 	// make a socket
 
@@ -39,7 +41,7 @@ int main (int argc, char *argv[])
 	bind(sockfd, res->ai_addr, res->ai_addrlen);
 	listen(sockfd, 10); // Listen on port 14805 for incoming connections
 
-	printf("We're now listening on port 12900...\n");
+	printf("We're now listening on port %s...\n", LISTENING_PORT);
 
 	struct sockaddr_storage their_addr; // Create a struct to hold the receiver information
 	socklen_t addr_size; // Initialize a size variable for their IP address
@@ -49,23 +51,53 @@ int main (int argc, char *argv[])
 
 	// Accept an incoming connection, open a socket 'newSock' for it
 	int newSock;
-	// char incoming[1024];
 	while (1)
 	{
 		newSock = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
 		if (newSock != -1)
 		{
 			printf("FUCK YEAH SEAKING! WE HAVE A CONNECTION BITCHES!\n");
-			int i = 0;
-			while (1)
+			struct timeval tv;
+			fd_set readfds; // Set of fds to listen on
+
+			tv.tv_sec = 7;
+			tv.tv_usec = 0;
+
+			FD_ZERO(&readfds); // Clear the set
+			FD_SET(newSock, &readfds); // Add our socket to the set
+
+			select(newSock+1, &readfds, NULL, NULL, &tv);
+		
+			char incoming[1024];
+			if (FD_ISSET(newSock, &readfds))
 			{
+				printf("OMFG, THEY DID SOMETHING\n");
+				/* int bytes_sent = recv(newSock, incoming, sizeof(incoming), 0);
+				if (bytes_sent > 2)
+				{
+					printf("I love One Piece.\n");
+				} */
+			}
+			else
+			{
+				printf("They didn't do anything. The fuck?\n");
+			}
+
+			// int i = 0;
+			// int iResult;
+			/* while (1)
+			{		
+				// iResult = recv(newSock, incoming, sizeof(incoming), 0);
+				if (iResult > 1)
+				{
+					printf("Bytes received: %d\n", iResult);
+				}
 				if (i < 10)
 				{
 					send(newSock, "Seaking\n", 8, 0);
+					i++;
 				}
-				i++;
-				// recv(newSock, incoming, 1024, 0);
-			}
+			} */
 		}
 	}
 
