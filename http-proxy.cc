@@ -6,10 +6,13 @@
 #include <netdb.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string>
+#include <cstring>
 
 using namespace std;
 
 char LISTENING_PORT[5] = {'1', '4', '8', '0', '5'};
+string welcomeMessage ("Hello and thank you for connecting to our http proxy server!\n");
 
 int main (int argc, char *argv[])
 {
@@ -19,6 +22,10 @@ int main (int argc, char *argv[])
 	// Store everything the client passes to you in a string buffer and pass it to Derek
 	
 	// ALEX'S CODE HERE
+	
+	// WHAT MY CODE DOES: Just run it and see. MAKE SURE TO LET THE SERVER SAY "SHUTTING DOWN..."!
+	// IT WILL AUTOMATICALLY DO IT AFTER 1-2 SECONDS WHEN YOU CLOSE DOWN THE CONNECTION FROM THE CLIENT SIDE
+	// IF YOU DON'T LET THE SERVER SHUT DOWN PROPERLY, IT LEAVES THE PORTS OPEN AND THIS TRIPS UP THE OS
 	
 	struct addrinfo hints, *res; // initialize structs that we'll be passing into functions
 	int sockfd; // initialize a socket for listening
@@ -32,11 +39,9 @@ int main (int argc, char *argv[])
 	getaddrinfo(NULL, LISTENING_PORT, &hints, &res); // Open port 14805 for victory
 
 	// make a socket
-
 	sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
 	// bind it to the port we passed in to getaddrinfo():
-
 	bind(sockfd, res->ai_addr, res->ai_addrlen);
 	listen(sockfd, 10); // Listen on port 14805 for incoming connections
 
@@ -48,72 +53,59 @@ int main (int argc, char *argv[])
 	
 	printf("Trying to set up a connection...\n");
 
+	char * cstr = new char [welcomeMessage.length()+1]; // Set up welcome message string
+	strcpy (cstr, welcomeMessage.c_str());
+	
 	// Accept an incoming connection, open a socket 'newSock' for it
 	int newSock;
-	while (1)
+	
+	char incoming[256];
+	int bytes_sent;
+	
+	newSock = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size); // Try to establish a connection
+	if (newSock != -1) // If we successfully accepted their connection request
 	{
-		newSock = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
-		if (newSock != -1)
-		{
-			printf("FUCK YEAH SEAKING! WE HAVE A CONNECTION BITCHES!\n");
-			struct timeval tv;
-			fd_set readfds; // Set of fds to listen on
-
-			tv.tv_sec = 7;
-			tv.tv_usec = 0;
-
-			FD_ZERO(&readfds); // Clear the set
-			FD_SET(newSock, &readfds); // Add our socket to the set
-
-			while (1)
-			{
-				select(newSock+1, &readfds, NULL, NULL, &tv);
+		send(newSock, cstr, welcomeMessage.length(), 0);
+		printf("We have just successfully established a connection.\n");
 		
-				// char incoming[1024];
-				if (FD_ISSET(newSock, &readfds))
-				{
-					printf("OMFG, THEY DID SOMETHING\n");
-					continue;
-					/* int bytes_sent = recv(newSock, incoming, sizeof(incoming), 0);
-					if (bytes_sent > 2)
-					{
-						printf("I love One Piece.\n");
-					} */
-				}
-				else
-				{
-					printf("They didn't do anything. The fuck?\n");
-				}
+		while (1)
+		{
+			bytes_sent = recv(newSock, incoming, sizeof(incoming), 0);
+			if (bytes_sent > 1)
+			{
+				printf("The client just told us: %s", incoming);
+				memset(incoming, 0, 256);
 			}
-
-			// int i = 0;
-			// int iResult;
-			/* while (1)
-			{		
-				// iResult = recv(newSock, incoming, sizeof(incoming), 0);
-				if (iResult > 1)
-				{
-					printf("Bytes received: %d\n", iResult);
-				}
-				if (i < 10)
-				{
-					send(newSock, "Seaking\n", 8, 0);
-					i++;
-				}
-			} */
+			if (bytes_sent <= 1)
+			{
+				printf("Shutting down...\n");
+				break;
+			}
 		}
+		
+		/* struct timeval tv; // Initialize a time interval structure
+		fd_set readfds; // Set of fds to listen on with select
+
+		tv.tv_sec = 10; // 10 seconds
+		tv.tv_usec = 0; // + 0 milliseconds
+
+		FD_ZERO(&readfds); // Clear the set
+		FD_SET(newSock, &readfds); // Add our socket to the set
+		
+		select(newSock+1, &readfds, NULL, NULL, &tv); // Listen on newSock for client input for 10 seconds flat
+		
+		if (FD_ISSET(newSock, &readfds)) // If input is detected, output a message
+		{
+			printf("Our client has input awaiting on their side of the connection.\n");
+		}
+		else
+		{
+			printf("After 10 seconds, they appear to have no input.\n");
+		} */
 	}
 
-	/* char incoming[1024];
-	while(1)
-	{
-		if (!recv(newSock, (void*) incoming, 1024, 0))
-		{
-			printf("The client just told us: %s\n", incoming);
-		}
-	} */
-
-	shutdown(sockfd, 0);
+	shutdown(sockfd, 0); // Shut down port 14805
+	shutdown(newSock, 0); // Shut down port we opened for client
 
 	// DEREK: Take in all strings from the above level
 	// Parse it for relevant pieces if it's a GET request
@@ -130,4 +122,5 @@ int main (int argc, char *argv[])
 	// Close the ports that have been opened unless it's non-persistent
 	
 	// JUSTIN'S CODE HERE
+	return 0;
 }
