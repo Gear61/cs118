@@ -16,15 +16,14 @@ int main (int argc, char *argv[])
 	// ALEX: Set up a socket and listen to incoming connection requests
 	// If we are dealing with 10 requests currently, reject the connection
 	// Otherwise, deal with the connection by opening a port for the client to talk to you on
-	// If they send you a GET request, deal with it by passing it down to Derek's level
-	// Otherwise, output the error message specified in the spec
+	// Store everything the client passes to you in a string buffer and pass it to Derek
 	
 	// ALEX'S CODE HERE
 	
 	struct addrinfo hints, *res; // initialize structs that we'll be passing into functions
 	int sockfd; // initialize a socket for listening
 
-	//first, load up address structs with getaddrinfo():
+	// first, load up address structs with getaddrinfo():
 
 	hints.ai_family = AF_UNSPEC;  // use IPv4 or IPv6, whichever
 	hints.ai_socktype = SOCK_STREAM;
@@ -66,21 +65,25 @@ int main (int argc, char *argv[])
 			FD_ZERO(&readfds); // Clear the set
 			FD_SET(newSock, &readfds); // Add our socket to the set
 
-			select(newSock+1, &readfds, NULL, NULL, &tv);
+			while (1)
+			{
+				select(newSock+1, &readfds, NULL, NULL, &tv);
 		
-			// char incoming[1024];
-			if (FD_ISSET(newSock, &readfds))
-			{
-				printf("OMFG, THEY DID SOMETHING\n");
-				/* int bytes_sent = recv(newSock, incoming, sizeof(incoming), 0);
-				if (bytes_sent > 2)
+				// char incoming[1024];
+				if (FD_ISSET(newSock, &readfds))
 				{
-					printf("I love One Piece.\n");
-				} */
-			}
-			else
-			{
-				printf("They didn't do anything. The fuck?\n");
+					printf("OMFG, THEY DID SOMETHING\n");
+					continue;
+					/* int bytes_sent = recv(newSock, incoming, sizeof(incoming), 0);
+					if (bytes_sent > 2)
+					{
+						printf("I love One Piece.\n");
+					} */
+				}
+				else
+				{
+					printf("They didn't do anything. The fuck?\n");
+				}
 			}
 
 			// int i = 0;
@@ -112,8 +115,9 @@ int main (int argc, char *argv[])
 
 	shutdown(sockfd, 0);
 
-	// DEREK: Take in the request from the above level
-	// Parse it for relevant pieces
+	// DEREK: Take in all strings from the above level
+	// Parse it for relevant pieces if it's a GET request
+	// Otherwise, return error message mentioned in spec
 	// If it's requesting something that is cached
 	// Reference the cache and return the proper information
 	// else, pass it on to Justin's section
