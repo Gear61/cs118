@@ -74,48 +74,29 @@ int main (int argc, char *argv[])
 			if (bytes_sent > 1)
 			{
 				printf("The client just told us: %s", incoming);
-				memset(incoming, 0, 256);
+			
+				// DEREK: Take in all strings from the above level
+				// Parse it for relevant pieces if it's a GET request
+				// Otherwise, return error message mentioned in spec
+				// If it's requesting something that is cached
+				// Reference the cache and return the proper information
+				// else, pass it on to Justin's section
+	
+				// DEREK'S CODE HERE
+
+				memset(incoming, 0, 256); // Reset incoming for future messages
 			}
-			if (bytes_sent <= 1)
+			if (bytes_sent <= 1) // Our client has disconnected
 			{
 				printf("Shutting down...\n");
 				break;
 			}
 		}
-		
-		/* struct timeval tv; // Initialize a time interval structure
-		fd_set readfds; // Set of fds to listen on with select
-
-		tv.tv_sec = 10; // 10 seconds
-		tv.tv_usec = 0; // + 0 milliseconds
-
-		FD_ZERO(&readfds); // Clear the set
-		FD_SET(newSock, &readfds); // Add our socket to the set
-		
-		select(newSock+1, &readfds, NULL, NULL, &tv); // Listen on newSock for client input for 10 seconds flat
-		
-		if (FD_ISSET(newSock, &readfds)) // If input is detected, output a message
-		{
-			printf("Our client has input awaiting on their side of the connection.\n");
-		}
-		else
-		{
-			printf("After 10 seconds, they appear to have no input.\n");
-		} */
 	}
 
 	shutdown(sockfd, 0); // Shut down port 14805
 	shutdown(newSock, 0); // Shut down port we opened for client
 
-	// DEREK: Take in all strings from the above level
-	// Parse it for relevant pieces if it's a GET request
-	// Otherwise, return error message mentioned in spec
-	// If it's requesting something that is cached
-	// Reference the cache and return the proper information
-	// else, pass it on to Justin's section
-	
-	// DEREK'S CODE HERE
-	
 	// JUSTIN: Connect to the server that the client is requesting data from
 	// Request the data and cache it
 	// Return the data to the client
