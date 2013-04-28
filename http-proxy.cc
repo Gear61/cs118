@@ -62,12 +62,17 @@ int main (int argc, char *argv[])
 	char incoming[256];
 	int bytes_sent;
 	
+	int i = 0;
+
+	newConn:
 	newSock = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size); // Try to establish a connection
 	if (newSock != -1) // If we successfully accepted their connection request
 	{
 		send(newSock, cstr, welcomeMessage.length(), 0);
 		printf("We have just successfully established a connection.\n");
 		
+		i++;
+
 		while (1)
 		{
 			bytes_sent = recv(newSock, incoming, sizeof(incoming), 0);
@@ -88,14 +93,21 @@ int main (int argc, char *argv[])
 			}
 			if (bytes_sent <= 1) // Our client has disconnected
 			{
-				printf("Shutting down...\n");
-				break;
+				printf("Our client has disconnected.\n");
+				if  (i >= 3)
+				{
+					printf("Shutting down http-proxy...\n");
+					goto exit;
+				}
+				printf("Trying to establish new connection...\n");
+				goto newConn;
 			}
 		}
 	}
-
+	
+	exit:
 	shutdown(sockfd, 0); // Shut down port 14805
-	shutdown(newSock, 0); // Shut down port we opened for client
+	// shutdown(newSock, 0); // Shut down port we opened for client
 
 	// JUSTIN: Connect to the server that the client is requesting data from
 	// Request the data and cache it
