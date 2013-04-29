@@ -8,14 +8,32 @@
 #include <stdio.h>
 #include <string>
 #include <cstring>
+#include <signal.h>
 
 using namespace std;
 
-char LISTENING_PORT[5] = {'1', '4', '8', '0', '5'};
-string welcomeMessage ("Hello and thank you for connecting to our http proxy server!\n");
+const char * LISTENING_PORT = "14805";
+const char * welcomeMessage = "Hello and thank you for connecting to our http proxy server!\n";
+
+// DEREK: Handle signal.
+static int sockfd;
+/* static void hdl (int sig) {
+	printf("SIGINT received. Shutting down server...\n");
+	shutdown (sockfd, 0);	
+} */
 
 int main (int argc, char *argv[])
 {
+	// DEREK: Signal handle so C-c closes the ports.
+	/* struct sigaction act;
+
+	memset (&act, '\0', sizeof(act));
+	act.sa_handler = &hdl;
+	if (sigaction(SIGINT, &act, NULL) < 0) {
+		perror ("sigaction");
+		return 1;
+	} */
+
 	// ALEX: Set up a socket and listen to incoming connection requests
 	// If we are dealing with 10 requests currently, reject the connection
 	// Otherwise, deal with the connection by opening a port for the client to talk to you on
@@ -28,7 +46,7 @@ int main (int argc, char *argv[])
 	// IF YOU DON'T LET THE SERVER SHUT DOWN PROPERLY, IT LEAVES THE PORTS OPEN AND THIS TRIPS UP THE OS
 	
 	struct addrinfo hints, *res; // initialize structs that we'll be passing into functions
-	int sockfd; // initialize a socket for listening
+	// int sockfd; // initialize a socket for listening
 
 	// first, load up address structs with getaddrinfo():
 
@@ -52,9 +70,6 @@ int main (int argc, char *argv[])
 	addr_size = sizeof(their_addr); // Get the size of it
 	
 	printf("Trying to set up a connection...\n");
-
-	char * cstr = new char [welcomeMessage.length()+1]; // Set up welcome message string
-	strcpy (cstr, welcomeMessage.c_str());
 	
 	// Accept an incoming connection, open a socket 'newSock' for it
 	int newSock;
@@ -68,7 +83,7 @@ int main (int argc, char *argv[])
 	newSock = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size); // Try to establish a connection
 	if (newSock != -1) // If we successfully accepted their connection request
 	{
-		send(newSock, cstr, welcomeMessage.length(), 0);
+		send(newSock, welcomeMessage, strlen(welcomeMessage), 0);
 		printf("We have just successfully established a connection.\n");
 		
 		i++;
@@ -76,10 +91,14 @@ int main (int argc, char *argv[])
 		while (1)
 		{
 			bytes_sent = recv(newSock, incoming, sizeof(incoming), 0);
+			if(bytes_sent == 2)
+			{
+				printf("Shutting down server...\n");	
+				goto exit;
+			}
 			if (bytes_sent > 1)
 			{
 				printf("The client just told us: %s", incoming);
-			
 				// DEREK: Take in all strings from the above level
 				// Parse it for relevant pieces if it's a GET request
 				// Otherwise, return error message mentioned in spec
