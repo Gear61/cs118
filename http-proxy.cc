@@ -13,24 +13,27 @@
 using namespace std;
 
 const char * LISTENING_PORT = "14805";
-const char * welcomeMessage = "Hello and thank you for connecting to our http proxy server!\n";
+string welcomeMessage("Hello and thank you for connecting to our http proxy server!\n");
 
 // DEREK: Handle signal.
 static int sockfd;
-/* static void hdl (int sig) {
+
+/* static void hdl (int sig) // Signal handler for C-c
+{
 	printf("SIGINT received. Shutting down server...\n");
-	shutdown (sockfd, 0);	
+	shutdown (sockfd, 0); // Shut down 14805
 } */
 
 int main (int argc, char *argv[])
 {
-	// DEREK: Signal handle so C-c closes the ports.
+	// DEREK: Signal handle so C-c shuts down port 14805
 	/* struct sigaction act;
 
 	memset (&act, '\0', sizeof(act));
 	act.sa_handler = &hdl;
-	if (sigaction(SIGINT, &act, NULL) < 0) {
-		perror ("sigaction");
+	if (sigaction(SIGINT, &act, NULL) < 0)
+	{
+		perror("sigaction");
 		return 1;
 	} */
 
@@ -70,6 +73,9 @@ int main (int argc, char *argv[])
 	addr_size = sizeof(their_addr); // Get the size of it
 	
 	printf("Trying to set up a connection...\n");
+
+	char * cstr = new char [welcomeMessage.length()+1]; // Set up welcome message string
+	strcpy (cstr, welcomeMessage.c_str());
 	
 	// Accept an incoming connection, open a socket 'newSock' for it
 	int newSock;
@@ -77,57 +83,41 @@ int main (int argc, char *argv[])
 	char incoming[256];
 	int bytes_sent;
 	
-	int i = 0;
-
-	newConn:
 	newSock = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size); // Try to establish a connection
 	if (newSock != -1) // If we successfully accepted their connection request
 	{
-		send(newSock, welcomeMessage, strlen(welcomeMessage), 0);
+		send(newSock, cstr, welcomeMessage.length(), 0);
 		printf("We have just successfully established a connection.\n");
 		
-		i++;
-
 		while (1)
 		{
 			bytes_sent = recv(newSock, incoming, sizeof(incoming), 0);
-			if(bytes_sent == 2)
-			{
-				printf("Shutting down server...\n");	
-				goto exit;
-			}
 			if (bytes_sent > 1)
 			{
 				printf("The client just told us: %s", incoming);
+				
 				// DEREK: Take in all strings from the above level
 				// Parse it for relevant pieces if it's a GET request
 				// Otherwise, return error message mentioned in spec
 				// If it's requesting something that is cached
 				// Reference the cache and return the proper information
 				// else, pass it on to Justin's section
-	
+				
 				// DEREK'S CODE HERE
-
-				memset(incoming, 0, 256); // Reset incoming for future messages
+				
+				memset(incoming, 0, 256);
 			}
-			if (bytes_sent <= 1) // Our client has disconnected
+			if (bytes_sent <= 1)
 			{
-				printf("Our client has disconnected.\n");
-				if  (i >= 3)
-				{
-					printf("Shutting down http-proxy...\n");
-					goto exit;
-				}
-				printf("Trying to establish new connection...\n");
-				goto newConn;
+				printf("Shutting down...\n");
+				break;
 			}
 		}
 	}
-	
-	exit:
-	shutdown(sockfd, 0); // Shut down port 14805
-	// shutdown(newSock, 0); // Shut down port we opened for client
 
+	shutdown(sockfd, 0); // Shut down port 14805
+	shutdown(newSock, 0); // Shut down port we opened for client
+	
 	// JUSTIN: Connect to the server that the client is requesting data from
 	// Request the data and cache it
 	// Return the data to the client
