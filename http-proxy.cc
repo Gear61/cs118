@@ -162,7 +162,7 @@ int main (int argc, char *argv[])
 	// JUSTIN: Connect to the server that the client is requesting data from
 	// Request the data and cache it
 	// Return the data to the client
-	// Close the ports that have been opened unless it's non-persistent
+	// Close the ports that have been opened unless it's persistent (which it is by default)
 	
 	// JUSTIN'S CODE HERE
 	return 0;
