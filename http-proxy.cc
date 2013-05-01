@@ -9,28 +9,29 @@
 #include <string>
 #include <cstring>
 #include <signal.h>
+#include "http-headers.h"
 
 using namespace std;
 
 const char * LISTENING_PORT = "14805";
 const char * welcomeMessage = "Hello and thank you for connecting to our http proxy server!\n";
 
-bool bail = false;
+// bool bail = false;
 
 // DEREK: Handle signal.
-static int sockfd;
+static int sockfd; // 14805
 
-static void hdl (int sig) // Signal handler for C-c
+/* static void hdl (int sig) // Signal handler for C-c
 {
 	printf("SIGINT received. Shutting down server...\n");
 	shutdown (sockfd, 0); // Shut down 14805
 	bail = true;
-}
+} */
 
 int main (int argc, char *argv[])
-{
+{	
 	// DEREK: Signal handle so C-c shuts down port 14805
-	struct sigaction act;
+	/* struct sigaction act;
 
 	memset (&act, '\0', sizeof(act));
 	act.sa_handler = &hdl;
@@ -38,7 +39,7 @@ int main (int argc, char *argv[])
 	{
 		perror("sigaction");
 		return 1;
-	}
+	} */
 
 	// ALEX: Set up a socket and listen to incoming connection requests
 	// If we are dealing with 10 requests currently, reject the connection
@@ -79,7 +80,7 @@ int main (int argc, char *argv[])
 	
 	char incoming[256];
 	int bytes_sent;
-
+	
 	newConn:
 	// Accept an incoming connection, open a socket 'newSock' for it
 	int newSock;
@@ -89,12 +90,40 @@ int main (int argc, char *argv[])
 		send(newSock, welcomeMessage, strlen(welcomeMessage), 0);
 		printf("We have just successfully established a connection.\n");
 		
+		HttpHeaders headers;
+		string nonPersist;
+		
 		while (1)
 		{
 			bytes_sent = recv(newSock, incoming, sizeof(incoming), 0);
 			if (bytes_sent > 1)
 			{
 				printf("The client just told us: %s", incoming);
+	
+				// HEADER LOGIC
+				// parse, if exception thrown, return (400)
+				// format before outgoing
+		
+				incoming[bytes_sent] = '\r';
+				incoming[bytes_sent+1] = '\n';
+
+				try
+				{
+					headers.ParseHeaders(incoming, bytes_sent + 2); // Parse headers for proper formatting
+				}
+				catch (ParseException& e) // Header wasn't properly formatted
+				{
+					printf("Parse exception!\n");
+					printf("Reason: %s\n", e.what());
+					goto clear;
+				}
+				printf("Correct header!\n");
+				
+				nonPersist = headers.FindHeader("Connection"); // Connection: close signifies non-persistent connection
+				if (!nonPersist.compare("close"))
+				{
+					printf("Our client wants our connection to the remote server to be non-persistent.\n");
+				}
 				
 				// DEREK: Take in all strings from the above level
 				// Parse it for relevant pieces if it's a GET request
@@ -105,7 +134,15 @@ int main (int argc, char *argv[])
 				
 				// DEREK'S CODE HERE
 				
+				clear:
 				memset(incoming, 0, 256);
+			}
+			if (bytes_sent == 2)
+			{
+				shutdown(newSock, 0);
+				shutdown(sockfd, 0);
+				printf("COMMENCING GHETTO SHUTDOWN!\n");
+				break;
 			}
 			if (bytes_sent <= 1)
 			{
@@ -117,10 +154,10 @@ int main (int argc, char *argv[])
 		}
 	}
 
-	if (!bail)
+	/* if (!bail)
 	{
 		goto newConn;
-	}
+	} */
 	
 	// JUSTIN: Connect to the server that the client is requesting data from
 	// Request the data and cache it
