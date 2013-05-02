@@ -16,31 +16,12 @@ using namespace std;
 const char * LISTENING_PORT = "14805";
 const char * welcomeMessage = "Hello and thank you for connecting to our http proxy server!\n";
 
-// bool bail = false;
-
-// DEREK: Handle signal.
 static int sockfd; // 14805
 
-/* static void hdl (int sig) // Signal handler for C-c
-{
-	printf("SIGINT received. Shutting down server...\n");
-	shutdown (sockfd, 0); // Shut down 14805
-	bail = true;
-} */
+bool bail = false;
 
 int main (int argc, char *argv[])
 {	
-	// DEREK: Signal handle so C-c shuts down port 14805
-	/* struct sigaction act;
-
-	memset (&act, '\0', sizeof(act));
-	act.sa_handler = &hdl;
-	if (sigaction(SIGINT, &act, NULL) < 0)
-	{
-		perror("sigaction");
-		return 1;
-	} */
-
 	// ALEX: Set up a socket and listen to incoming connection requests
 	// If we are dealing with 10 requests currently, reject the connection
 	// Otherwise, deal with the connection by opening a port for the client to talk to you on
@@ -61,7 +42,7 @@ int main (int argc, char *argv[])
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
 
-	getaddrinfo(NULL, LISTENING_PORT, &hints, &res); // Open port 14805 for victory
+	getaddrinfo(NULL, LISTENING_PORT, &hints, &res); // Open port 14805 for listening
 
 	// make a socket
 	sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
@@ -78,91 +59,86 @@ int main (int argc, char *argv[])
 	
 	printf("Trying to set up a connection...\n");
 	
-	char incoming[256];
-	int bytes_sent;
+	char incoming[256]; // Buffer for storing incoming messages from client
+	int bytes_sent; // Variable to keep track of how many bytes were sent
 	
-	newConn:
 	// Accept an incoming connection, open a socket 'newSock' for it
 	int newSock;
-	newSock = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size); // Try to establish a connection
-	if (newSock != -1) // If we successfully accepted their connection request
+	while (!bail)
 	{
-		send(newSock, welcomeMessage, strlen(welcomeMessage), 0);
-		printf("We have just successfully established a connection.\n");
-		
-		HttpHeaders headers;
-		string nonPersist;
-		
-		while (1)
+		newSock = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size); // Try to establish a connection
+		if (newSock != -1) // If we successfully accepted their connection request
 		{
-			bytes_sent = recv(newSock, incoming, sizeof(incoming), 0);
-			if (bytes_sent > 1)
+			send(newSock, welcomeMessage, strlen(welcomeMessage), 0); // Send client a message acknowledging connection
+			printf("We have just successfully established a connection.\n");
+			
+			HttpHeaders headers; // Header object to store headers
+			string nonPersist; // Variable for checking for non-persistent HTTP header
+			
+			while (1)
 			{
-				printf("The client just told us: %s", incoming);
-	
-				// HEADER LOGIC
-				// parse, if exception thrown, return (400)
-				// format before outgoing
+				bytes_sent = recv(newSock, incoming, sizeof(incoming), 0);
+				if (bytes_sent > 1)
+				{
+					printf("The client just told us: %s", incoming);
 		
-				incoming[bytes_sent] = '\r';
-				incoming[bytes_sent+1] = '\n';
+					// HEADER LOGIC
+					// parse, if exception thrown, return (400)
+					// format before outgoing
+			
+					incoming[bytes_sent] = '\r';
+					incoming[bytes_sent+1] = '\n';
 
-				try
-				{
-					headers.ParseHeaders(incoming, bytes_sent + 2); // Parse headers for proper formatting
+					try
+					{
+						headers.ParseHeaders(incoming, bytes_sent + 2);
+					}
+					catch (ParseException& e)
+					{
+						printf("Parse exception!\n");
+						printf("Reason: %s\n", e.what());
+					}
+					
+					nonPersist = headers.FindHeader("Connection");
+					if (!nonPersist.compare("close"))
+					{
+						printf("Our client wants our connection to the remote server to be non-persistent.\n");
+					}
+					
+					// DEREK: Take in all strings from the above level
+					// Parse it for relevant pieces if it's a GET request
+					// Otherwise, return error message mentioned in spec
+					// If it's requesting something that is cached
+					// Reference the cache and return the proper information
+					// else, pass it on to Justin's section
+					
+					// DEREK'S CODE HERE
+					
+					memset(incoming, 0, 256);
 				}
-				catch (ParseException& e) // Header wasn't properly formatted
+				if (bytes_sent == 2)
 				{
-					printf("Parse exception!\n");
-					printf("Reason: %s\n", e.what());
-					goto clear;
+					bail = true;
+					shutdown(newSock, 0);
+					shutdown(sockfd, 0);
+					printf("COMMENCING GHETTO SHUTDOWN!\n");
+					break;
 				}
-				printf("Correct header!\n");
-				
-				nonPersist = headers.FindHeader("Connection"); // Connection: close signifies non-persistent connection
-				if (!nonPersist.compare("close"))
+				if (bytes_sent <= 1)
 				{
-					printf("Our client wants our connection to the remote server to be non-persistent.\n");
+					shutdown(newSock, 0);
+					printf("Our client has disconnected.\n");
+					printf("Attempting to establish new connection...\n");
+					break;
 				}
-				
-				// DEREK: Take in all strings from the above level
-				// Parse it for relevant pieces if it's a GET request
-				// Otherwise, return error message mentioned in spec
-				// If it's requesting something that is cached
-				// Reference the cache and return the proper information
-				// else, pass it on to Justin's section
-				
-				// DEREK'S CODE HERE
-				
-				clear:
-				memset(incoming, 0, 256);
-			}
-			if (bytes_sent == 2)
-			{
-				shutdown(newSock, 0);
-				shutdown(sockfd, 0);
-				printf("COMMENCING GHETTO SHUTDOWN!\n");
-				break;
-			}
-			if (bytes_sent <= 1)
-			{
-				shutdown(newSock, 0);
-				printf("Our client has disconnected.\n");
-				printf("Attempting to establish new connection...\n");
-				goto newConn;
 			}
 		}
 	}
-
-	/* if (!bail)
-	{
-		goto newConn;
-	} */
 	
 	// JUSTIN: Connect to the server that the client is requesting data from
 	// Request the data and cache it
 	// Return the data to the client
-	// Close the ports that have been opened unless it's persistent (which it is by default)
+	// Close the ports that have been opened unless it's non-persistent
 	
 	// JUSTIN'S CODE HERE
 	return 0;
