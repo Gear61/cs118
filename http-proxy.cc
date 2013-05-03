@@ -10,6 +10,7 @@
 #include <cstring>
 #include <signal.h>
 #include "http-headers.h"
+#include "http-request.h"
 
 using namespace std;
 
@@ -81,7 +82,7 @@ int main (int argc, char *argv[])
 				if (bytes_sent > 1)
 				{
 					printf("The client just told us: %s", incoming);
-		
+/*		
 					// HEADER LOGIC
 					// parse, if exception thrown, return (400)
 					// format before outgoing
@@ -104,14 +105,60 @@ int main (int argc, char *argv[])
 					{
 						printf("Our client wants our connection to the remote server to be non-persistent.\n");
 					}
-					
+*/					
 					// DEREK: Take in all strings from the above level
 					// Parse it for relevant pieces if it's a GET request
+					HttpRequest req;
+					try
+					{
+						req.ParseRequest(incoming, bytes_sent + 2);
+					}
+					catch (ParseException& e)
+					{
+						printf("Parse exception!\n");
+						printf("Reason: %s\n", e.what());
+					}
+
+					// TODO: Finish tsting
+					cout << "Testing host: " << req.GetHost() << endl;
+					
+					// HEADER LOGIC
+					// parse, if exception thrown, return (400)
+					// format before outgoing
+			
+					incoming[bytes_sent] = '\r';
+					incoming[bytes_sent+1] = '\n';
+
+					try
+					{
+						headers.ParseHeaders(incoming, bytes_sent + 2);
+					}
+					catch (ParseException& e)
+					{
+						printf("Parse exception!\n");
+						printf("Reason: %s\n", e.what());
+					}
+					
+					nonPersist = headers.FindHeader("Connection");
+					if (!nonPersist.compare("close"))
+					{
+						printf("Our client wants our connection to the remote server to be non-persistent.\n");
+					}
+
 					// Otherwise, return error message mentioned in spec
 					// If it's requesting something that is cached
-					// Reference the cache and return the proper information
+					/* TODO: Implement this.
+					CacheObject co = new CacheObject();
+					if (co.contains(RequestedThing))
+					{ 		
+						// Reference the cache and return the proper information
+						send(newSock, co.get(RequestedThing), RequestedThing.GetTotalLen(), 0);
+					}
 					// else, pass it on to Justin's section
-					
+					else
+					{
+						co.add(RequestedThing);
+					} */
 					// DEREK'S CODE HERE
 					
 					memset(incoming, 0, 256);
