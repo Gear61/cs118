@@ -1,3 +1,2 @@
-./waf configure
 ./waf
 ./build/http-proxy

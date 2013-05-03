@@ -1,149 +1,134 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
 #include <iostream>
+#include <string>
+#include <string.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <netdb.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string>
-#include <cstring>
-#include <signal.h>
-#include "http-headers.h"
-#include "http-request.h"
-#include <sys/time.h>
 #include <unistd.h>
-#include <sys/poll.h>
+#include <signal.h>
+#include "http-request.h"
+#include "http-headers.h"
+#include "http-response.h"
 
 using namespace std;
 
-const char * LISTENING_PORT = "14077";
-const char * welcomeMessage = "Hello and thank you for connecting to our http proxy server!\n";
+const char* LISTENING_PORT = "4649";
+const char* WELCOME_MSG = "This is our proxy server. Yoroshiku.\n";
+int sockfd, new_fd;
 
-static int sockfd; // 14805
+void signal_handler(int sig)
+{
+	cout << "SIGINT received. Closing sockets." << endl;
+	close(sockfd);
+	close(new_fd);
+	exit(0);
+}
 
-bool bail = false;
+bool doneCheck (char * input, int length)
+{
+	if ((input[length - 4] == '\r') && (input[length - 3] == '\n') && (input[length - 2] == '\r') && (input[length - 1] == '\n'))
+	{
+		return true;
+	}
+	return false;
+}
 
 int main (int argc, char *argv[])
-{	
-	// ALEX: Set up a socket and listen to incoming connection requests
-	// If we are dealing with 10 requests currently, reject the connection
-	// Otherwise, deal with the connection by opening a port for the client to talk to you on
-	// Store everything the client passes to you in a string buffer and pass it to Derek
-	
-	// ALEX'S CODE HERE
-	
-	// WHAT MY CODE DOES: Just run it and see. MAKE SURE TO LET THE SERVER SAY "SHUTTING DOWN..."!
-	// IT WILL AUTOMATICALLY DO IT AFTER 1-2 SECONDS WHEN YOU CLOSE DOWN THE CONNECTION FROM THE CLIENT SIDE
-	// IF YOU DON'T LET THE SERVER SHUT DOWN PROPERLY, IT LEAVES THE PORTS OPEN AND THIS TRIPS UP THE OS
-	
-	struct addrinfo hints, *res; // initialize structs that we'll be passing into functions
-	// int sockfd; // initialize a socket for listening
+{
+	signal(SIGINT, signal_handler);
+	// command line parsing
+
+	struct sockaddr_storage their_addr;
+	socklen_t addr_size;
+	struct addrinfo hints, *res;
 
 	// first, load up address structs with getaddrinfo():
 
+	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;  // use IPv4 or IPv6, whichever
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;     // fill in my IP for me
 
-	getaddrinfo(NULL, LISTENING_PORT, &hints, &res); // Open port 14805 for listening
+	getaddrinfo(NULL, LISTENING_PORT, &hints, &res);
 
-	// make a socket
+	// make a socket, bind it, and listen on it:
+
 	sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-
-	// bind it to the port we passed in to getaddrinfo():
 	bind(sockfd, res->ai_addr, res->ai_addrlen);
-	listen(sockfd, 10); // Listen on port 14805 for incoming connections
+	listen(sockfd, 10);
+	cout << "We are now listening on port " << LISTENING_PORT << ". We await connections." << endl;
 
-	printf("We're now listening on port %s...\n", LISTENING_PORT);
+	// now accept an incoming connection:
 
-	struct sockaddr_storage their_addr; // Create a struct to hold the receiver information
-	socklen_t addr_size; // Initialize a size variable for their IP address
-	addr_size = sizeof(their_addr); // Get the size of it
+	addr_size = sizeof their_addr;
+
+	char incoming[512];
+	int bytesSent = 1;
+	bool terminate = 0;
 	
-	printf("Trying to set up a connection...\n");
-	
-	char incoming[256]; // Buffer for storing incoming messages from client
-	int bytes_sent; // Variable to keep track of how many bytes were sent
-	
-	// Accept an incoming connection, open a socket 'newSock' for it
-	int newSock;
-	while (!bail)
+	int offset = 0; // We will write to 'incoming' one piece at a time. However, we will still account for all input coming at once
+
+	HttpRequest req;
+
+	while(!terminate)
 	{
-		newSock = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size); // Try to establish a connection
-		if (newSock != -1) // If we successfully accepted their connection request
+		cout << "Accepting..." << endl;
+		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
+		// ready to communicate on socket descriptor new_fd!
+		if(new_fd != -1)
 		{
-			send(newSock, welcomeMessage, strlen(welcomeMessage), 0); // Send client a message acknowledging connection
-			printf("We have just successfully established a connection.\n");
-			
-			while (1)
-			{	
-				bytes_sent = recv(newSock, incoming, sizeof(incoming), 0);
-				if (bytes_sent > 1)
+			cout << "Received connection." << endl;
+			send(new_fd, WELCOME_MSG, strlen(WELCOME_MSG), 0);
+
+			while(bytesSent != 0)
+			{
+				if (offset == 0) // We're not appending to anything. Clear the buffer
 				{
-					// DEREK: Take in all strings from the above level
-					// Parse it for relevant pieces if it's a GET request
-					printf("Our client just said: %s\n", incoming);
-					HttpRequest req;
+					memset(incoming, 0, sizeof(incoming));
+				}
+				bytesSent = recv(new_fd, incoming + offset, sizeof(incoming) - strlen(incoming), 0); // Receive information from client
+				/* cout << "Received: " << incoming << endl;
+				cout << "Number of bytes: " << bytesSent << endl; */
+				
+				if ( (strlen(incoming) >= 4) && (doneCheck(incoming, strlen(incoming))) ) // Alright, they ended with 2 carriage returns. We can parse now
+				{
+					offset = 0; // We will read into the BEGINNING of the buffer on next iteration
 					try
 					{
-						req.ParseRequest(incoming, bytes_sent + 2);
+						req.ParseRequest(incoming, strlen(incoming));
+						cout << "They sent us a legitimate request." << endl;
+						/* cout << "Host: " << req.GetHost() << endl;
+						cout << "Version: " << req.GetVersion() << endl; */
 					}
-					catch (ParseException& e)
+					catch (ParseException& e) // Here, we make an HttpResponse object, format it, and return the string from formatting
 					{
-						printf("Parse exception!\n");
-						printf("Reason: %s\n", e.what());
+						cout << "They sent us a bad request." << endl;
+						HttpResponse error;
+						error.SetVersion("1.1");
+						error.SetStatusMsg(e.what());
+						error.SetStatusCode("400");
+						char * errorMessage = (char*) malloc(error.GetTotalLength());
+						memset(errorMessage, 0, error.GetTotalLength());
+						error.FormatResponse(errorMessage);
+						send(new_fd, errorMessage, 13 + (strlen(e.what())), 0);
+						send(new_fd, "\n\n", 2, 0);
+						offset = 0; // Ok, they messed up. Let them start anew
+						free(errorMessage);
 					}
-
-					// TODO: Finish tsting
-					cout << "Testing host: " << req.GetHost() << endl;
-					
-					// HEADER LOGIC
-					// parse, if exception thrown, return (400)
-					// format before outgoing
-			
-					// Otherwise, return error message mentioned in spec
-					// If it's requesting something that is cached
-					/* TODO: Implement this.
-					CacheObject co = new CacheObject();
-					if (co.contains(RequestedThing))
-					{ 		
-						// Reference the cache and return the proper information
-						send(newSock, co.get(RequestedThing), RequestedThing.GetTotalLen(), 0);
-					}
-					// else, pass it on to Justin's section
-					else
-					{
-						co.add(RequestedThing);
-					} */
-					// DEREK'S CODE HERE
-					
-					memset(incoming, 0, 256);
 				}
-				if (bytes_sent == 2)
+				else // We shall read in input until we get two carriage returns back to back
 				{
-					bail = true;
-					shutdown(newSock, 0);
-					shutdown(sockfd, 0);
-					printf("COMMENCING GHETTO SHUTDOWN!\n");
-					break;
-				}
-				if (bytes_sent <= 1)
-				{
-					shutdown(newSock, 0);
-					printf("Our client has disconnected.\n");
-					printf("Attempting to establish new connection...\n");
-					break;
+					offset += bytesSent;
+					continue;
 				}
 			}
 		}
 	}
 	
-	// JUSTIN: Connect to the server that the client is requesting data from
-	// Request the data and cache it
-	// Return the data to the client
-	// Close the ports that have been opened unless it's non-persistent
-	
-	// JUSTIN'S CODE HERE
-	return 0;
+	close(sockfd);
+ 	return 0;
 }
