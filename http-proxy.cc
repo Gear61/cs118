@@ -11,10 +11,13 @@
 #include <signal.h>
 #include "http-headers.h"
 #include "http-request.h"
+#include <sys/time.h>
+#include <unistd.h>
+#include <sys/poll.h>
 
 using namespace std;
 
-const char * LISTENING_PORT = "14805";
+const char * LISTENING_PORT = "14077";
 const char * welcomeMessage = "Hello and thank you for connecting to our http proxy server!\n";
 
 static int sockfd; // 14805
@@ -73,41 +76,14 @@ int main (int argc, char *argv[])
 			send(newSock, welcomeMessage, strlen(welcomeMessage), 0); // Send client a message acknowledging connection
 			printf("We have just successfully established a connection.\n");
 			
-			HttpHeaders headers; // Header object to store headers
-			string nonPersist; // Variable for checking for non-persistent HTTP header
-			
 			while (1)
-			{
+			{	
 				bytes_sent = recv(newSock, incoming, sizeof(incoming), 0);
 				if (bytes_sent > 1)
 				{
-					printf("The client just told us: %s", incoming);
-/*		
-					// HEADER LOGIC
-					// parse, if exception thrown, return (400)
-					// format before outgoing
-			
-					incoming[bytes_sent] = '\r';
-					incoming[bytes_sent+1] = '\n';
-
-					try
-					{
-						headers.ParseHeaders(incoming, bytes_sent + 2);
-					}
-					catch (ParseException& e)
-					{
-						printf("Parse exception!\n");
-						printf("Reason: %s\n", e.what());
-					}
-					
-					nonPersist = headers.FindHeader("Connection");
-					if (!nonPersist.compare("close"))
-					{
-						printf("Our client wants our connection to the remote server to be non-persistent.\n");
-					}
-*/					
 					// DEREK: Take in all strings from the above level
 					// Parse it for relevant pieces if it's a GET request
+					printf("Our client just said: %s\n", incoming);
 					HttpRequest req;
 					try
 					{
@@ -126,25 +102,6 @@ int main (int argc, char *argv[])
 					// parse, if exception thrown, return (400)
 					// format before outgoing
 			
-					incoming[bytes_sent] = '\r';
-					incoming[bytes_sent+1] = '\n';
-
-					try
-					{
-						headers.ParseHeaders(incoming, bytes_sent + 2);
-					}
-					catch (ParseException& e)
-					{
-						printf("Parse exception!\n");
-						printf("Reason: %s\n", e.what());
-					}
-					
-					nonPersist = headers.FindHeader("Connection");
-					if (!nonPersist.compare("close"))
-					{
-						printf("Our client wants our connection to the remote server to be non-persistent.\n");
-					}
-
 					// Otherwise, return error message mentioned in spec
 					// If it's requesting something that is cached
 					/* TODO: Implement this.
