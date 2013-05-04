@@ -7,8 +7,8 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
 #include <sys/wait.h>
+#include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <signal.h>
@@ -22,10 +22,10 @@
 
 using namespace std;
 
-const char* LISTENING_PORT = "14895";
-const char* WELCOME_MSG = "This is our proxy server. Thanks for connecting to it!\n";
+const char* LISTENING_PORT = "4647";
+const char* WELCOME_MSG = "This is our proxy server. Yoroshiku.\n";
 const char* REJECTION_MSG = "Too many processes. Please try again later.\n";
-int sockfd, new_fd;
+int sockfd, new_fd, outgoing;
 
 pid_t connectionsOpen[10];
 
@@ -34,6 +34,7 @@ void signal_handler(int sig)
 	cout << "SIGINT received. Closing sockets." << endl;
 	close(sockfd);
 	close(new_fd);
+	close(outgoing);
 	exit(0);
 }
 
@@ -43,15 +44,40 @@ bool doneCheck (char * input, int length)
 		&& (input[length - 2] == '\r') 	&& (input[length - 1] == '\n'));
 }
 
+int containsEndOfHeader(char* input, int len)
+{
+	int step = 0;
+	for(int i = 0; i < len; ++i) {
+		switch(step) {
+		case 0:
+		case 2:
+			if (input[i] == '\r')
+				step++;
+			else
+				step = 0;
+			break;
+		case 1:
+		case 3:
+			if (input[i] == '\n')
+				step++;
+			else
+				step = 0;
+		default:
+			if(step == 4)
+				return i;	
+		}
+	}
+	return -1;
+}
+
+// Gets the first slot in the array.
 pid_t getOpenSlot()
 {
 	int i;
 	for (i = 0; i < 10; ++i)
 	{
 		if (connectionsOpen[i] == 0)
-		{
 			return i;
-		}
 	}
 	return -1;
 }
@@ -66,9 +92,7 @@ void updateConnections()
 		{
 			pid = waitpid(connectionsOpen[i], &status, WNOHANG);
 			if (pid)
-			{
 				connectionsOpen[i] = 0;
-			}
 		}
 	}
 }
@@ -76,12 +100,14 @@ void updateConnections()
 int main (int argc, char *argv[])
 {
 	signal(SIGINT, signal_handler);
+	// command line parsing
 
 	struct sockaddr_storage their_addr;
 	socklen_t addr_size;
 	struct addrinfo hints, *res;
 
 	// first, load up address structs with getaddrinfo():
+
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;  // use IPv4 or IPv6, whichever
 	hints.ai_socktype = SOCK_STREAM;
@@ -108,6 +134,8 @@ int main (int argc, char *argv[])
 	HttpRequest req;
 	// Cache myCache;
 
+	memset (connectionsOpen, 0, sizeof connectionsOpen);
+
 	while(!terminate)
 	{
 		updateConnections();
@@ -118,28 +146,31 @@ int main (int argc, char *argv[])
 		if(new_fd != -1)
 		{
 			pid_t newCon = getOpenSlot();
-			if (newCon < 0)
+			if(newCon < 0)
 			{
 				send(new_fd, REJECTION_MSG, strlen(REJECTION_MSG), 0);
 				close(new_fd);
 			}
-			
+
+//			numConnections++;
+//			cout << "We have " << numConnections << " connections. FUCK YEAH!" << endl;
 			pid_t pid = fork(); // Spawn a new process. Child takes cares of request
-			if (pid > 0) // Put child into array of open connections
+
+			if (pid > 0)
 			{
 				connectionsOpen[newCon] = pid;
 				continue;
 			}
 			else if (pid < 0)
 			{
-				const char* critfail = "Fork failed somehow.";
-				cout << critfail << endl;
+				const char* critfail = "Our apologies. Something has gone abhorrently wrong.\n";
+				cout << critfail;
 				send (new_fd, critfail, strlen(critfail), 0);
 				close(new_fd);
 				close(sockfd);
-				exit(1);	
+				exit(1);
 			}
-			
+
 			cout << "Received connection." << endl;
 			send(new_fd, WELCOME_MSG, strlen(WELCOME_MSG), 0);
 			
@@ -152,15 +183,18 @@ int main (int argc, char *argv[])
 				
 				bytesSent = recv(new_fd, incoming + offset, sizeof(incoming) - strlen(incoming), 0); // Receive information from client
 
+				/* cout << "Received: " << incoming << endl;
+				cout << "Number of bytes: " << bytesSent << endl; */
+				
 				if ( (strlen(incoming) >= 4) && (doneCheck(incoming, strlen(incoming))) ) // Alright, they ended with 2 carriage returns. We can parse now
 				{
 					offset = 0; // We will read into the BEGINNING of the buffer on next iteration
 					try
 					{
 						req.ParseRequest(incoming, strlen(incoming));
-						cout << "Legitimate request received." << endl;
+
 						struct addrinfo info1, *info2;
-						int outgoing;
+						//int outgoing;
 
 						// first, load up address structs with getaddrinfo():
 
@@ -175,8 +209,7 @@ int main (int argc, char *argv[])
 						
 						// make a socket
 						outgoing = socket(info2->ai_family, info2->ai_socktype, info2->ai_protocol);
-						
-						// make buffer for reading input, buffer for final return
+					
 						char response [4096];
 						int numChars = 4096;
 						char * finalResponse = (char*) malloc(numChars * sizeof(char));
@@ -185,7 +218,7 @@ int main (int argc, char *argv[])
 
 						string reqMsg = "GET " + req.GetPath() + " HTTP/1.1\r\n\r\n"; 					
 	
-						int bytes_given = 1;					
+						int bytes_given = 20;					
 
 						// connect it to the address and port we passed in to getaddrinfo():			
 						if (connect(outgoing, info2->ai_addr, info2->ai_addrlen) == 0)
@@ -193,16 +226,22 @@ int main (int argc, char *argv[])
 							HttpResponse res2;
 
 							cout << "We have connected!" << endl;
-							send(outgoing, reqMsg.c_str(), reqMsg.length(), 0);
-							while (1)
+							// cout << "We are sending them this: " << reqMsg << endl;
+							int sendint = send(outgoing, reqMsg.c_str(), reqMsg.length(), 0);
+							cout << "reqmsg: " << reqMsg << "~" << sendint <<"..."<< endl;
+							while (1)//bytes_given = (recv(outgoing, response, sizeof(response), 0))) > 0)
 							{
 								bytes_given = recv(outgoing, response, sizeof(response), 0);
-								if(bytes_given == 0)
+								if(bytes_given == 2)
 								{
 									cout << "Breaking loose." << endl;
 									break;
 								}
 
+								cout << "ONE" << endl;
+								cout << "TWO: " << response << endl;
+								cout << "TWO AGAIN: " << (int) response[0] << " " << (int) response[1] << endl;
+								send(new_fd, response, bytes_given, 0);
 								while (index + bytes_given > numChars)
 								{
 									numChars *= 2;
@@ -210,27 +249,51 @@ int main (int argc, char *argv[])
 								}
 								strcpy(finalResponse + index, response);
 								index += bytes_given;
+//								memset(response, 0, sizeof response);
+								cout << "TWO" << endl;
 
-								if(doneCheck(response, strlen(response)))
+//								cout << "finres: " << finalResponse << endl;
+/*								if(doneCheck(finalResponse, strlen(finalResponse)))
 								{
 									res2.ParseResponse(finalResponse, strlen(finalResponse));
-									// int contentLength = atoi(res2.FindHeader("Content-Length").c_str());
+									int contentLength = atoi(res2.FindHeader("Content-Length").c_str());
+									cout << "Cont len: " << contentLength << endl;
+
 									memset(response, 0, sizeof(response));
 									break;
 								}
+
+								
+								
+								if(containsEndOfHeader(response, sizeof(response)))
+									break;
+*/
+								cout << "THREE" << endl;
 								memset(response, 0, sizeof(response));
 							}
-							bytes_given = (recv(outgoing, response, sizeof(response), 0));
-							strcpy(finalResponse + index, response);
-							index += bytes_given;
+							int ender = containsEndOfHeader(finalResponse, index);
+							res2.ParseResponse(finalResponse, ender);
 
-							send(new_fd, finalResponse, index, 0);
+							cout << "THREE AND A HALF" << endl;
+							memset(response, 0, sizeof(response));
+//							bytes_given = (recv(outgoing, response, sizeof(response), 0));
+//							strcpy(finalResponse + index, response);
+//							index += bytes_given;
+							cout << "FINAL\n" << finalResponse << "FINAL~ " << index << endl;
+
+//							finalResponse[index] = '\r';
+//							finalResponse[index+1] = '\n';
+/*							finalResponse[index+1] = '\r';
+							finalResponse[index+2] = '\n';
+*/							send(new_fd, finalResponse, index, 0);
 							free(finalResponse);
+							close(outgoing);
 						}
 						else
 						{
 							cout << "Connection to " << req.FindHeader("Host") << " failed." << endl;
 						}
+						cout << "FOUR" << endl;
 					}
 					catch (ParseException& e) // Here, we make an HttpResponse object, format it, and return the string from formatting
 					{
@@ -256,7 +319,8 @@ int main (int argc, char *argv[])
 			}
 			exit(0);
 		}
-	}	
+	}
+	
 	close(sockfd);
  	return 0;
 }

@@ -8,7 +8,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <sys/wait.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <signal.h>
@@ -18,16 +17,14 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #include <string>
-#include "cache.h"
 
 using namespace std;
 
-const char* LISTENING_PORT = "14895";
-const char* WELCOME_MSG = "This is our proxy server. Thanks for connecting to it!\n";
-const char* REJECTION_MSG = "Too many processes. Please try again later.\n";
+const char* LISTENING_PORT = "4650";
+const char* WELCOME_MSG = "This is our proxy server. Yoroshiku.\n";
 int sockfd, new_fd;
 
-pid_t connectionsOpen[10];
+int numConnections = 0;
 
 void signal_handler(int sig)
 {
@@ -39,49 +36,27 @@ void signal_handler(int sig)
 
 bool doneCheck (char * input, int length)
 {
-	return ((input[length - 4] == '\r') && (input[length - 3] == '\n') 
-		&& (input[length - 2] == '\r') 	&& (input[length - 1] == '\n'));
-}
-
-pid_t getOpenSlot()
-{
-	int i;
-	for (i = 0; i < 10; ++i)
+	if ((input[length - 4] == '\r') 
+	&& (input[length - 3] == '\n') 
+	&& (input[length - 2] == '\r') 
+	&& (input[length - 1] == '\n'))
 	{
-		if (connectionsOpen[i] == 0)
-		{
-			return i;
-		}
+		return true;
 	}
-	return -1;
-}
-
-void updateConnections()
-{
-	int i;
-	for (i = 0; i < 10; ++i)
-	{
-		int status; pid_t pid;
-		if (connectionsOpen[i] > 0)
-		{
-			pid = waitpid(connectionsOpen[i], &status, WNOHANG);
-			if (pid)
-			{
-				connectionsOpen[i] = 0;
-			}
-		}
-	}
+	return false;
 }
 
 int main (int argc, char *argv[])
 {
 	signal(SIGINT, signal_handler);
+	// command line parsing
 
 	struct sockaddr_storage their_addr;
 	socklen_t addr_size;
 	struct addrinfo hints, *res;
 
 	// first, load up address structs with getaddrinfo():
+
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;  // use IPv4 or IPv6, whichever
 	hints.ai_socktype = SOCK_STREAM;
@@ -106,40 +81,21 @@ int main (int argc, char *argv[])
 	int offset = 0; // We will write to 'incoming' one piece at a time. However, we will still account for all input coming at once
 
 	HttpRequest req;
-	// Cache myCache;
 
-	while(!terminate)
+	while(!terminate && (numConnections < 10))
 	{
-		updateConnections();
-
 		cout << "Accepting..." << endl;
 		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
 		// ready to communicate on socket descriptor new_fd!
 		if(new_fd != -1)
 		{
-			pid_t newCon = getOpenSlot();
-			if (newCon < 0)
-			{
-				send(new_fd, REJECTION_MSG, strlen(REJECTION_MSG), 0);
-				close(new_fd);
-			}
-			
+			numConnections++;
+			cout << "We have " << numConnections << " connections. FUCK YEAH!" << endl;
 			pid_t pid = fork(); // Spawn a new process. Child takes cares of request
-			if (pid > 0) // Put child into array of open connections
+			if (pid)
 			{
-				connectionsOpen[newCon] = pid;
 				continue;
 			}
-			else if (pid < 0)
-			{
-				const char* critfail = "Fork failed somehow.";
-				cout << critfail << endl;
-				send (new_fd, critfail, strlen(critfail), 0);
-				close(new_fd);
-				close(sockfd);
-				exit(1);	
-			}
-			
 			cout << "Received connection." << endl;
 			send(new_fd, WELCOME_MSG, strlen(WELCOME_MSG), 0);
 			
@@ -152,13 +108,23 @@ int main (int argc, char *argv[])
 				
 				bytesSent = recv(new_fd, incoming + offset, sizeof(incoming) - strlen(incoming), 0); // Receive information from client
 
+				/* cout << "Received: " << incoming << endl;
+				cout << "Number of bytes: " << bytesSent << endl; */
+				
 				if ( (strlen(incoming) >= 4) && (doneCheck(incoming, strlen(incoming))) ) // Alright, they ended with 2 carriage returns. We can parse now
 				{
 					offset = 0; // We will read into the BEGINNING of the buffer on next iteration
 					try
 					{
 						req.ParseRequest(incoming, strlen(incoming));
-						cout << "Legitimate request received." << endl;
+						cout << "They sent us a legitimate request." << endl;
+						cout << incoming << endl;
+						// cout << "Host: " << req.GetHost() << endl;
+						// cout << "Version: " << req.GetVersion() << endl;
+						
+						// cout << "Path: " << req.GetPath() << endl;
+						// cout << "Port: " << req.GetPort() << endl;
+
 						struct addrinfo info1, *info2;
 						int outgoing;
 
@@ -176,56 +142,25 @@ int main (int argc, char *argv[])
 						// make a socket
 						outgoing = socket(info2->ai_family, info2->ai_socktype, info2->ai_protocol);
 						
-						// make buffer for reading input, buffer for final return
 						char response [4096];
-						int numChars = 4096;
-						char * finalResponse = (char*) malloc(numChars * sizeof(char));
-						int index = 0;
 						memset(response, 0, sizeof(response));
-
-						string reqMsg = "GET " + req.GetPath() + " HTTP/1.1\r\n\r\n"; 					
-	
-						int bytes_given = 1;					
-
+					
+						/* char * requestMsg = (char*)malloc(req.GetTotalLength());
+						req.FormatHeaders(requestMsg);
+						printf("%s\n", requestMsg);
+						free(requestMsg); */
+					
+						string requestMsg("GET " + req.GetPath() + " HTTP/1.1\r\n\r\n");
+						cout << requestMsg;
+						
 						// connect it to the address and port we passed in to getaddrinfo():			
 						if (connect(outgoing, info2->ai_addr, info2->ai_addrlen) == 0)
 						{
-							HttpResponse res2;
-
 							cout << "We have connected!" << endl;
-							send(outgoing, reqMsg.c_str(), reqMsg.length(), 0);
-							while (1)
-							{
-								bytes_given = recv(outgoing, response, sizeof(response), 0);
-								if(bytes_given == 0)
-								{
-									cout << "Breaking loose." << endl;
-									break;
-								}
-
-								while (index + bytes_given > numChars)
-								{
-									numChars *= 2;
-									finalResponse = (char*) realloc ((void*) finalResponse, (numChars * sizeof(char)));
-								}
-								strcpy(finalResponse + index, response);
-								index += bytes_given;
-
-								if(doneCheck(response, strlen(response)))
-								{
-									res2.ParseResponse(finalResponse, strlen(finalResponse));
-									// int contentLength = atoi(res2.FindHeader("Content-Length").c_str());
-									memset(response, 0, sizeof(response));
-									break;
-								}
-								memset(response, 0, sizeof(response));
-							}
-							bytes_given = (recv(outgoing, response, sizeof(response), 0));
-							strcpy(finalResponse + index, response);
-							index += bytes_given;
-
-							send(new_fd, finalResponse, index, 0);
-							free(finalResponse);
+							send(outgoing, requestMsg.c_str(), requestMsg.length(), 0);
+							// bytes_sent = recv(outgoing, response, sizeof(response), 0);
+							cout << response << endl;
+							send(new_fd, response, strlen(response), 0);
 						}
 						else
 						{
@@ -256,7 +191,8 @@ int main (int argc, char *argv[])
 			}
 			exit(0);
 		}
-	}	
+	}
+	
 	close(sockfd);
  	return 0;
 }

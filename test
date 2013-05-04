@@ -1,1 +1,8 @@
+cp portconf temp
+cp portconf1 portconf
+cp portconf2 portconf1
+cp portconf3 portconf2
+cp portconf4 portconf3
+cp temp portconf4
+rm temp
 ./http-tester.py 2>/dev/null

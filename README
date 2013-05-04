@@ -1,3 +1,25 @@
+DESCRIPTION OF CODE:
+
+First, the code sets up the socket and listens on it as detailed by Beej's
+network guide. Next, the parent process accepts new connections, spawning child
+threads for each connection up to then connections. It stores them in an array
+holding the pid of the children.
+
+The parent constantly updates the statuses of the children, and when a child
+exits, it means its connection has ended and there is room for another process.
+
+Inside the child process, the code parses incoming requests using the http-
+request.h library. It then uses the response library to format a response and
+send it to the requester. When the connection is terminated, the child exits
+with status 0. The child calls upon the cache with the given requests.
+
+The cache takes in a request. If the cache contains the requested item, it
+sends the item back. Else, the cache attempts to obtain the requested item
+and if it does, it sends it to the requester.
+
+
+
+
 USEFUL LINKS:
 SPEC: http://irl.cs.ucla.edu/~yingdi/cs118/proj1.html
 PRINCETON SPEC: http://www.cs.princeton.edu/courses/archive/spring13/cos461/assignments-proxy.html#Assignment_Details

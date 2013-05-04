@@ -1,0 +1,4 @@
+Members:
+Alex Chiou 	- Socket connection, request send and parsing, caching
+Justin Jordan	- Caching, file io, connection, responding to requests
+Derek Ng	- Request parsing, socket connection, fork connections
