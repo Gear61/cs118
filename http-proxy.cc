@@ -17,6 +17,7 @@
 #include <sys/select.h>
 #include <sys/time.h>
 #include <string>
+#include "cache.h"
 
 using namespace std;
 
@@ -75,6 +76,7 @@ int main (int argc, char *argv[])
 	int offset = 0; // We will write to 'incoming' one piece at a time. However, we will still account for all input coming at once
 
 	HttpRequest req;
+	Cache myCache;
 
 	while(!terminate && (numConnections < 10))
 	{
@@ -111,12 +113,10 @@ int main (int argc, char *argv[])
 					try
 					{
 						req.ParseRequest(incoming, strlen(incoming));
+						myCache.getHttp(req);
+						cout << "Justin's part ends here." << endl;
+
 						cout << "They sent us a legitimate request." << endl;
-						cout << "Host: " << req.GetHost() << endl;
-						// cout << "Version: " << req.GetVersion() << endl;
-						
-						cout << "Path: " << req.GetPath() << endl;
-						// cout << "Port: " << req.GetPort() << endl;
 
 						struct addrinfo info1, *info2;
 						int outgoing;
@@ -127,8 +127,6 @@ int main (int argc, char *argv[])
 						info1.ai_family = AF_UNSPEC;  // use IPv4 or IPv6, whichever
 						info1.ai_socktype = SOCK_STREAM;
 						
-
-						// we could put "80" instead on "http" on the next line:
 						int portNum = (int) req.GetPort();
 						char portNum2 [6];
 						sprintf(portNum2, "%d", portNum);
@@ -177,8 +175,6 @@ int main (int argc, char *argv[])
 					continue;
 				}
 			}
-			numConnections--;
-			cout << "We have " << numConnections << " connections now." << endl;
 			exit(0);
 		}
 	}
