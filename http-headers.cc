@@ -150,10 +150,29 @@ HttpHeaders::ModifyHeader (const std::string &key, const std::string &value)
 
 std::string
 HttpHeaders::FindHeader (const std::string &key)
-{
+{ /*
   std::list<HttpHeader>::iterator item = std::find (m_headers.begin (), m_headers.end (), key);
   if (item != m_headers.end ())
     return item->m_value;
   else
     return "";
+  */
+
+  // DEREK'S SUPER AWESOME FINDHEADER CASE INSENSITIVITY FIX
+  std::list<HttpHeader>::iterator item;
+  std::string localKey = key, localVal;
+
+  boost::algorithm::to_lower(localKey);
+
+  for (item = m_headers.begin (); item != m_headers.end (); ++item)
+  {
+    localVal = item->m_key;
+    boost::algorithm::to_lower(localVal);
+    if (localVal.compare(localKey) == 0)
+    {
+      return item->m_value;
+    }
+  }
+
+  return "";
 }
