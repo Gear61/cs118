@@ -21,7 +21,7 @@
 
 using namespace std;
 
-const char* LISTENING_PORT = "4650";
+const char* LISTENING_PORT = "4645";
 const char* WELCOME_MSG = "This is our proxy server. Yoroshiku.\n";
 int sockfd, new_fd;
 
@@ -76,7 +76,7 @@ int main (int argc, char *argv[])
 	int offset = 0; // We will write to 'incoming' one piece at a time. However, we will still account for all input coming at once
 
 	HttpRequest req;
-	Cache myCache;
+	// Cache myCache;
 
 	while(!terminate && (numConnections < 10))
 	{
@@ -113,10 +113,6 @@ int main (int argc, char *argv[])
 					try
 					{
 						req.ParseRequest(incoming, strlen(incoming));
-						myCache.getHttp(req);
-						cout << "Justin's part ends here." << endl;
-
-						cout << "They sent us a legitimate request." << endl;
 
 						struct addrinfo info1, *info2;
 						int outgoing;
@@ -134,24 +130,78 @@ int main (int argc, char *argv[])
 						
 						// make a socket
 						outgoing = socket(info2->ai_family, info2->ai_socktype, info2->ai_protocol);
-						
+					
 						char response [4096];
+						int numChars = 4096;
+						char * finalResponse = (char*) malloc(numChars * sizeof(char));
+						int index = 0;
 						memset(response, 0, sizeof(response));
-						
+
+						string reqMsg = "GET " + req.GetPath() + " HTTP/1.1\r\n\r\n"; 					
+	
+						int bytes_given = 20;					
+
 						// connect it to the address and port we passed in to getaddrinfo():			
 						if (connect(outgoing, info2->ai_addr, info2->ai_addrlen) == 0)
 						{
+							HttpResponse res2;
+
 							cout << "We have connected!" << endl;
-							cout << "We are sending them this: " << incoming << endl;
-							send(outgoing, incoming, strlen(incoming), 0);
-							recv(outgoing, response, sizeof(response), 0);
-							cout << response << endl;
-							// Now we can just send incoming to the remote server
+							// cout << "We are sending them this: " << reqMsg << endl;
+							send(outgoing, reqMsg.c_str(), reqMsg.length(), 0);
+							cout << "reqmsg: " << reqMsg << "~" << endl;
+							while (1)//bytes_given = (recv(outgoing, response, sizeof(response), 0))) > 0)
+							{
+								bytes_given = recv(outgoing, response, sizeof(response), 0);
+								if(bytes_given == 0)
+								{
+									cout << "Breaking loose." << endl;
+									break;
+								}
+
+								cout << "ONE" << endl;
+								// send(outgoing, response, bytes_given, 0);
+								while (index + bytes_given > numChars)
+								{
+									numChars *= 2;
+									finalResponse = (char*) realloc ((void*) finalResponse, (numChars * sizeof(char)));
+								}
+								strcpy(finalResponse + index, response);
+								index += bytes_given;
+//								memset(response, 0, sizeof response);
+								cout << "TWO" << endl;
+
+//								cout << "finres: " << finalResponse << endl;
+								if(doneCheck(finalResponse, strlen(finalResponse)))
+								{
+									res2.ParseResponse(finalResponse, strlen(finalResponse));
+									int contentLength = atoi(res2.FindHeader("Content-Length").c_str());
+									cout << "Cont len: " << contentLength << endl;
+
+									memset(response, 0, sizeof(response));
+									break;
+								}
+								cout << "THREE" << endl;
+//								memset(response, 0, sizeof(response));
+							}
+							cout << "THREE AND A HALF" << endl;
+							bytes_given = (recv(outgoing, response, sizeof(response), 0));
+							strcpy(finalResponse + index, response);
+							index += bytes_given;
+							cout << "FINAL\n" << finalResponse << "FINAL~ " << index << endl;
+
+							finalResponse[index] = '\r';
+							finalResponse[index+1] = '\n';
+/*							finalResponse[index+1] = '\r';
+							finalResponse[index+2] = '\n';
+*/							send(new_fd, finalResponse, index + 2, 0);
+							free(finalResponse);
 						}
 						else
 						{
 							cout << "Connection to " << req.FindHeader("Host") << " failed." << endl;
 						}
+						cout << "FOUR" << endl;
 					}
 					catch (ParseException& e) // Here, we make an HttpResponse object, format it, and return the string from formatting
 					{
