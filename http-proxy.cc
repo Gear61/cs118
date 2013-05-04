@@ -36,14 +36,8 @@ void signal_handler(int sig)
 
 bool doneCheck (char * input, int length)
 {
-	if ((input[length - 4] == '\r') 
-	&& (input[length - 3] == '\n') 
-	&& (input[length - 2] == '\r') 
-	&& (input[length - 1] == '\n'))
-	{
-		return true;
-	}
-	return false;
+	return ((input[length - 4] == '\r') && (input[length - 3] == '\n') 
+		&& (input[length - 2] == '\r') 	&& (input[length - 1] == '\n'));
 }
 
 int main (int argc, char *argv[])
