@@ -137,7 +137,9 @@ int main (int argc, char *argv[])
 			}
 			else if (pid < 0)
 			{
-				cout << "Our apologies. Something has gone abhorrently wrong." << endl;
+				string critfail = "Our apologies. Something has gone abhorrently wrong.\n";
+				cout << critfail;
+				send (new_fd, critfail, strlen(critfail), 0);
 				close(new_fd);
 				close(sockfd);
 				exit(1);
