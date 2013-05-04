@@ -1,5 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
+#include <stdio.h>
 #include <iostream>
 #include <string>
 #include <string.h>
@@ -13,12 +14,17 @@
 #include "http-request.h"
 #include "http-headers.h"
 #include "http-response.h"
+#include <sys/select.h>
+#include <sys/time.h>
+#include <string>
 
 using namespace std;
 
-const char* LISTENING_PORT = "4649";
+const char* LISTENING_PORT = "4650";
 const char* WELCOME_MSG = "This is our proxy server. Yoroshiku.\n";
 int sockfd, new_fd;
+
+int numConnections = 0;
 
 void signal_handler(int sig)
 {
@@ -30,11 +36,8 @@ void signal_handler(int sig)
 
 bool doneCheck (char * input, int length)
 {
-	if ((input[length - 4] == '\r') && (input[length - 3] == '\n') && (input[length - 2] == '\r') && (input[length - 1] == '\n'))
-	{
-		return true;
-	}
-	return false;
+	return ((input[length - 4] == '\r') && (input[length - 3] == '\n') 
+		&& (input[length - 2] == '\r') 	&& (input[length - 1] == '\n'));
 }
 
 int main (int argc, char *argv[])
@@ -56,7 +59,6 @@ int main (int argc, char *argv[])
 	getaddrinfo(NULL, LISTENING_PORT, &hints, &res);
 
 	// make a socket, bind it, and listen on it:
-
 	sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 	bind(sockfd, res->ai_addr, res->ai_addrlen);
 	listen(sockfd, 10);
@@ -74,23 +76,32 @@ int main (int argc, char *argv[])
 
 	HttpRequest req;
 
-	while(!terminate)
+	while(!terminate && (numConnections < 10))
 	{
 		cout << "Accepting..." << endl;
 		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
 		// ready to communicate on socket descriptor new_fd!
 		if(new_fd != -1)
 		{
+			numConnections++;
+			cout << "We have " << numConnections << " connections. FUCK YEAH!" << endl;
+			pid_t pid = fork(); // Spawn a new process. Child takes cares of request
+			if (pid)
+			{
+				continue;
+			}
 			cout << "Received connection." << endl;
 			send(new_fd, WELCOME_MSG, strlen(WELCOME_MSG), 0);
-
+			
 			while(bytesSent != 0)
 			{
 				if (offset == 0) // We're not appending to anything. Clear the buffer
 				{
 					memset(incoming, 0, sizeof(incoming));
 				}
+				
 				bytesSent = recv(new_fd, incoming + offset, sizeof(incoming) - strlen(incoming), 0); // Receive information from client
+
 				/* cout << "Received: " << incoming << endl;
 				cout << "Number of bytes: " << bytesSent << endl; */
 				
@@ -101,8 +112,48 @@ int main (int argc, char *argv[])
 					{
 						req.ParseRequest(incoming, strlen(incoming));
 						cout << "They sent us a legitimate request." << endl;
-						/* cout << "Host: " << req.GetHost() << endl;
-						cout << "Version: " << req.GetVersion() << endl; */
+						cout << "Host: " << req.GetHost() << endl;
+						// cout << "Version: " << req.GetVersion() << endl;
+						
+						cout << "Path: " << req.GetPath() << endl;
+						// cout << "Port: " << req.GetPort() << endl;
+
+						struct addrinfo info1, *info2;
+						int outgoing;
+
+						// first, load up address structs with getaddrinfo():
+
+						memset(&info1, 0, sizeof info1);
+						info1.ai_family = AF_UNSPEC;  // use IPv4 or IPv6, whichever
+						info1.ai_socktype = SOCK_STREAM;
+						
+
+						// we could put "80" instead on "http" on the next line:
+						int portNum = (int) req.GetPort();
+						char portNum2 [6];
+						sprintf(portNum2, "%d", portNum);
+						getaddrinfo((req.GetHost()).c_str(), portNum2, &info1, &info2);
+						
+						// make a socket
+						outgoing = socket(info2->ai_family, info2->ai_socktype, info2->ai_protocol);
+						
+						char response [4096];
+						memset(response, 0, sizeof(response));
+						
+						// connect it to the address and port we passed in to getaddrinfo():			
+						if (connect(outgoing, info2->ai_addr, info2->ai_addrlen) == 0)
+						{
+							cout << "We have connected!" << endl;
+							cout << "We are sending them this: " << incoming << endl;
+							send(outgoing, incoming, strlen(incoming), 0);
+							recv(outgoing, response, sizeof(response), 0);
+							cout << response << endl;
+							// Now we can just send incoming to the remote server
+						}
+						else
+						{
+							cout << "Connection to " << req.FindHeader("Host") << " failed." << endl;
+						}
 					}
 					catch (ParseException& e) // Here, we make an HttpResponse object, format it, and return the string from formatting
 					{
@@ -126,6 +177,9 @@ int main (int argc, char *argv[])
 					continue;
 				}
 			}
+			numConnections--;
+			cout << "We have " << numConnections << " connections now." << endl;
+			exit(0);
 		}
 	}
 	
