@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -21,11 +22,13 @@
 
 using namespace std;
 
-const char* LISTENING_PORT = "4650";
+const char* LISTENING_PORT = "4649";
 const char* WELCOME_MSG = "This is our proxy server. Yoroshiku.\n";
+const char* REJECTION_MSG = "Too many processes. Please try again later.\n";
 int sockfd, new_fd;
 
-int numConnections = 0;
+pid_t connectionsOpen[10];
+//int numConnections = 0;
 
 void signal_handler(int sig)
 {
@@ -39,6 +42,33 @@ bool doneCheck (char * input, int length)
 {
 	return ((input[length - 4] == '\r') && (input[length - 3] == '\n') 
 		&& (input[length - 2] == '\r') 	&& (input[length - 1] == '\n'));
+}
+
+// Gets the first slot in the array.
+pid_t getOpenSlot()
+{
+	int i;
+	for (i = 0; i < 10; ++i)
+	{
+		if (connectionsOpen[i] == 0)
+			return i;
+	}
+	return -1;
+}
+
+void updateConnections()
+{
+	int i;
+	for (i = 0; i < 10; ++i)
+	{
+		int status; pid_t pid;
+		if (connectionsOpen[i] > 0)
+		{
+			pid = waitpid(connectionsOpen[i], &status, WNOHANG);
+			if (pid)
+				connectionsOpen[i] = 0;
+		}
+	}
 }
 
 int main (int argc, char *argv[])
@@ -78,20 +108,41 @@ int main (int argc, char *argv[])
 	HttpRequest req;
 	Cache myCache;
 
-	while(!terminate && (numConnections < 10))
+	memset (connectionsOpen, 0, sizeof connectionsOpen);
+
+	while(!terminate)
 	{
+		updateConnections();
+
 		cout << "Accepting..." << endl;
 		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
 		// ready to communicate on socket descriptor new_fd!
 		if(new_fd != -1)
 		{
-			numConnections++;
-			cout << "We have " << numConnections << " connections. FUCK YEAH!" << endl;
-			pid_t pid = fork(); // Spawn a new process. Child takes cares of request
-			if (pid)
+			pid_t newCon = getOpenSlot();
+			if(newCon < 0)
 			{
+				send(new_fd, REJECTION_MSG, strlen(REJECTION_MSG), 0);
+				close(new_fd);
+			}
+
+//			numConnections++;
+//			cout << "We have " << numConnections << " connections. FUCK YEAH!" << endl;
+			pid_t pid = fork(); // Spawn a new process. Child takes cares of request
+
+			if (pid > 0)
+			{
+				connectionsOpen[newCon] = pid;
 				continue;
 			}
+			else if (pid < 0)
+			{
+				cout << "Our apologies. Something has gone abhorrently wrong." << endl;
+				close(new_fd);
+				close(sockfd);
+				exit(1);
+			}
+
 			cout << "Received connection." << endl;
 			send(new_fd, WELCOME_MSG, strlen(WELCOME_MSG), 0);
 			
