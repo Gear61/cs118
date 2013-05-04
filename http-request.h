@@ -103,14 +103,14 @@ public:
   // /**
   //  * @brief Set method of the HTTP request
   //  */
-  // const std::string &
-  // GetProtocol () const;
+  const std::string &
+  GetProtocol () const;
 
   // /**
   //  * @brief Set method of the HTTP request
   //  */
-  // void
-  // SetProtocol (const std::string &protocol);
+  void
+  SetProtocol (const std::string &protocol);
 
   /**
    * @brief Get host of the HTTP request
@@ -166,6 +166,7 @@ private:
   unsigned short m_port;
   std::string m_path;
   std::string m_version;
+  std::string m_protocol;
 };
 
 #endif // _HTTP_REQUEST_H_
